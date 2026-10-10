@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weekend Bakes — Inventory</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #faf6f1;
+      --surface: #ffffff;
+      --surface-2: #fcf8f4;
+      --border: #eadfd4;
+      --text: #3d2c24;
+      --muted: #8a7268;
+      --primary: #c4784a;
+      --primary-dark: #a05e35;
+      --primary-soft: #f5e6d8;
+      --ok: #2d8a5e;
+      --ok-bg: #e6f5ed;
+      --low: #c47a1a;
+      --low-bg: #fef3e0;
+      --oos: #c44536;
+      --oos-bg: #fdecea;
+      --shadow: 0 4px 20px rgba(61, 44, 36, 0.06);
+      --radius: 12px;
+      --font: 'DM Sans', system-ui, sans-serif;
+      --display: 'Playfair Display', Georgia, serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    button { font-family: inherit; cursor: pointer; border: none; background: none; }
+    input, select, textarea { font-family: inherit; font-size: 0.95rem; }
+
+    .app { max-width: 1100px; margin: 0 auto; padding: 24px 20px 60px; }
+    .header {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: 16px; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid var(--border);
+    }
+    .brand h1 {
+      font-family: var(--display); font-size: 1.75rem; font-weight: 600;
+      color: var(--text); letter-spacing: -0.02em;
+    }
+    .brand span { font-size: 0.85rem; color: var(--muted); }
+    .header-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 16px; border-radius: 8px; font-size: 0.9rem; font-weight: 600;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--surface-2); }
+    .btn-danger { background: var(--oos-bg); color: var(--oos); border: 1px solid #f5c4be; }
+    .btn-danger:hover { background: #fadad6; }
+    .btn-ghost { color: var(--muted); padding: 9px 12px; }
+    .btn-ghost:hover { color: var(--text); background: var(--surface-2); }
+
+    .stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px; margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow);
+    }
+    .stat-card h4 {
+      font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.04em; color: var(--muted); margin-bottom: 4px;
+    }
+    .stat-card .value { font-size: 1.5rem; font-weight: 700; color: var(--text); }
+    .stat-card.alert .value { color: var(--oos); }
+    .stat-card.warn .value { color: var(--low); }
+
+    .toolbar {
+      display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; align-items: center;
+    }
+    .search-input {
+      flex: 1; min-width: 180px; padding: 10px 14px;
+      border: 1px solid var(--border); border-radius: 8px;
+      background: var(--surface); color: var(--text); outline: none;
+    }
+    .search-input:focus { border-color: var(--primary); }
+    .filter-select {
+      padding: 10px 12px; border: 1px solid var(--border);
+      border-radius: 8px; background: var(--surface); color: var(--text); outline: none;
+    }
+
+    .alert-banner {
+      background: var(--low-bg); border: 1px solid #f0d4a8; color: #8a5a10;
+      padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 0.9rem;
+    }
+    .alert-banner.danger { background: var(--oos-bg); border-color: #f5c4be; color: var(--oos); }
+
+    .table-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+    }
+    .table-wrapper { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+    thead th {
+      text-align: left; padding: 12px 14px; font-size: 0.75rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted);
+      background: var(--surface-2); border-bottom: 1px solid var(--border); white-space: nowrap;
+    }
+    tbody td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: #fdfaf7; }
+    tbody tr.row-oos { background: #fff8f7; }
+    .cat-header td {
+      background: var(--surface-2) !important; font-weight: 700; color: #5c4033;
+      padding: 10px 14px; font-size: 0.85rem;
+    }
+    .product-name { font-weight: 600; color: var(--text); }
+    .product-meta { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+
+    .stock-wrap {
+      display: inline-flex; align-items: center; gap: 0;
+      border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface);
+    }
+    .stock-btn {
+      width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; font-weight: 600; color: var(--text); background: var(--surface-2);
+    }
+    .stock-btn:hover:not(:disabled) { background: var(--primary-soft); color: var(--primary-dark); }
+    .stock-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .stock-btn.plus { color: var(--ok); }
+    .stock-qty-input {
+      width: 48px; border: none; text-align: center; font-weight: 700;
+      background: transparent; color: var(--text); outline: none; padding: 0;
+      -moz-appearance: textfield;
+    }
+    .stock-qty-input::-webkit-outer-spin-button,
+    .stock-qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+    .badge {
+      display: inline-block; padding: 3px 10px; border-radius: 20px;
+      font-size: 0.75rem; font-weight: 600; white-space: nowrap;
+    }
+    .badge-ok { background: var(--ok-bg); color: var(--ok); }
+    .badge-low { background: var(--low-bg); color: var(--low); }
+    .badge-oos { background: var(--oos-bg); color: var(--oos); }
+    .badge-best { background: #fef3e0; color: #b8860b; font-size: 0.72rem; }
+
+    .actions { display: flex; gap: 4px; flex-wrap: wrap; }
+    .icon-btn {
+      width: 32px; height: 32px; border-radius: 6px; display: flex;
+      align-items: center; justify-content: center; color: var(--muted);
+    }
+    .icon-btn:hover { background: var(--surface-2); color: var(--text); }
+    .icon-btn.edit:hover { color: var(--primary); }
+    .icon-btn.delete:hover { color: var(--oos); background: var(--oos-bg); }
+
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(61, 44, 36, 0.35);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100; padding: 16px; animation: fadeIn 0.15s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal {
+      background: var(--surface); border-radius: 14px; width: 100%; max-width: 440px;
+      max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 20px 50px rgba(61, 44, 36, 0.18); animation: slideUp 0.2s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(12px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 20px 12px; border-bottom: 1px solid var(--border);
+    }
+    .modal-header h2 { font-family: var(--display); font-size: 1.25rem; font-weight: 600; }
+    .modal-body { padding: 16px 20px; }
+    .modal-footer {
+      display: flex; justify-content: flex-end; gap: 8px;
+      padding: 12px 20px 18px; border-top: 1px solid var(--border);
+    }
+    .form-group { margin-bottom: 14px; }
+    .form-group label {
+      display: block; font-size: 0.8rem; font-weight: 600; color: var(--muted); margin-bottom: 4px;
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 9px 12px; border: 1px solid var(--border);
+      border-radius: 8px; background: var(--bg); color: var(--text); outline: none;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      border-color: var(--primary);
+    }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .checkbox-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+    .checkbox-row input { width: auto; }
+    .checkbox-row label { margin: 0; font-size: 0.9rem; color: var(--text); font-weight: 500; }
+
+    .empty { text-align: center; padding: 48px 20px; color: var(--muted); }
+    .empty p { margin-bottom: 12px; }
+
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--text); color: #fff; padding: 10px 20px; border-radius: 8px;
+      font-size: 0.9rem; font-weight: 500; z-index: 200;
+      animation: fadeIn 0.2s ease; box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    }
+
+    .history-list { max-height: 320px; overflow-y: auto; }
+    .history-item { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+    .history-item:last-child { border-bottom: none; }
+    .history-item .time { font-size: 0.75rem; color: var(--muted); }
+
+    .footer-note {
+      margin-top: 20px; font-size: 0.8rem; color: var(--muted); text-align: center;
+    }
+
+    @media (max-width: 640px) {
+      .app { padding: 16px 12px 48px; }
+      .brand h1 { font-size: 1.4rem; }
+      thead th:nth-child(2), tbody td:nth-child(2),
+      thead th:nth-child(5), tbody td:nth-child(5) { display: none; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.0/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useCallback, useMemo } = React;
+
+    /* ── Seed data (from original Weekend Bakes) ── */
+    const SEED_PRODUCTS = [
+      { id: 1, name: 'Velvet Whim', category: 'Cookies', price: 75, cost: 55, description: 'Soft & dreamy velvet cookie', weeklyStock: 20, currentStock: 20, bestSeller: true, isActive: true },
+      { id: 2, name: 'Oreo Cheesecake', category: 'Cookies', price: 50, cost: 30, description: 'Creamy oreo cheesecake flavor', weeklyStock: 20, currentStock: 20, bestSeller: true, isActive: true },
+      { id: 3, name: 'Biscoff Meltaway', category: 'Cookies', price: 80, cost: 55, description: 'Buttery biscoff that melts in your mouth', weeklyStock: 20, currentStock: 20, bestSeller: true, isActive: true },
+      { id: 4, name: 'Berry Bliss', category: 'Cookies', price: 85, cost: 85, description: 'Sweet berry-filled cookie', weeklyStock: 20, currentStock: 20, bestSeller: false, isActive: true },
+      { id: 5, name: 'Chocolate Bombshell', category: 'Cookies', price: 35, cost: 20, description: 'Rich chocolate explosion', weeklyStock: 20, currentStock: 20, bestSeller: true, isActive: true },
+      { id: 19, name: 'Matcha Truffle', category: 'Cookies', price: 85, cost: 55, description: 'Soft matcha cookie with truffle richness', weeklyStock: 20, currentStock: 20, bestSeller: false, isActive: true },
+      { id: 6, name: 'Biscoffie', category: 'Scoopable Cookies', price: 95, cost: 49, description: 'Scoopable biscoff cookie dough', weeklyStock: 20, currentStock: 20, bestSeller: false, isActive: true },
+      { id: 7, name: 'Oreo Scoop', category: 'Scoopable Cookies', price: 80, cost: 49, description: 'Scoopable oreo cookie dough', weeklyStock: 20, currentStock: 20, bestSeller: false, isActive: true },
+      { id: 8, name: 'Salty Scoop', category: 'Scoopable Cookies', price: 80, cost: 49, description: 'Sweet & salty scoopable cookie', weeklyStock: 20, currentStock: 20, bestSeller: false, isActive: true },
+      { id: 9, name: 'DCC Pistachio', category: 'Chewy Cookies', price: 110, cost: 90, description: 'Chewy double chocolate with pistachio', weeklyStock: 20, currentStock: 20, bestSeller: false, isActive: true },
+      { id: 10, name: 'DCC Nutella', category: 'Chewy Cookies', price: 110, cost: 90, description: 'Chewy double chocolate with Nutella', weeklyStock: 20, currentStock: 20, bestSeller: false, isActive: true },
+      { id: 11, name: 'DCC Tiramisu', category: 'Chewy Cookies', price: 110, cost: 90, description: 'Chewy double chocolate tiramisu flavor', weeklyStock: 20, currentStock: 20, bestSeller: false, isActive: true },
+      { id: 12, name: 'DCC Biscoff', category: 'Chewy Cookies', price: 110, cost: 90, description: 'Chewy double chocolate with biscoff', weeklyStock: 20, currentStock: 20, bestSeller: true, isActive: true },
+      { id: 13, name: 'Polvoron Chewy - Grande (15pcs)', category: 'Chewy Cookies', price: 150, cost: 90, description: '15 pieces of polvoron chewy cookies', weeklyStock: 10, currentStock: 10, bestSeller: false, isActive: true },
+      { id: 14, name: 'Polvoron Chewy - Petite (10pcs)', category: 'Chewy Cookies', price: 100, cost: 60, description: '10 pieces of polvoron chewy cookies', weeklyStock: 10, currentStock: 10, bestSeller: false, isActive: true },
+      { id: 15, name: 'Almond and Choco', category: 'Banana Loaves', price: 150, cost: 110, description: 'Banana loaf with almond & chocolate', weeklyStock: 30, currentStock: 30, bestSeller: false, isActive: true },
+      { id: 16, name: 'Almond', category: 'Banana Loaves', price: 150, cost: 110, description: 'Classic banana loaf with almonds', weeklyStock: 30, currentStock: 30, bestSeller: false, isActive: true },
+      { id: 17, name: 'Choco Chip', category: 'Banana Loaves', price: 150, cost: 110, description: 'Banana loaf loaded with chocolate chips', weeklyStock: 30, currentStock: 30, bestSeller: false, isActive: true },
+      { id: 18, name: 'Classic', category: 'Banana Loaves', price: 140, cost: 105, description: 'Original moist banana loaf', weeklyStock: 30, currentStock: 30, bestSeller: false, isActive: true },
+    ];
+
+    const CATEGORIES = ['Cookies', 'Scoopable Cookies', 'Chewy Cookies', 'Banana Loaves'];
+    const LOW_STOCK_THRESHOLD = 5;
+    const STORAGE_KEY = 'wb_inventory_products';
+    const HISTORY_KEY = 'wb_inventory_history';
+
+    /* ── localStorage DB ── */
+    function loadProducts() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length) return parsed;
+        }
+      } catch (e) {}
+      const seeded = SEED_PRODUCTS.map(p => ({ ...p }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));
+      return seeded;
+    }
+
+    function saveProducts(products) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+    }
+
+    function loadHistory() {
+      try {
+        const raw = localStorage.getItem(HISTORY_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch (e) {}
+      return [];
+    }
+
+    function pushHistory(entry) {
+      const history = loadHistory();
+      history.unshift({ ...entry, id: Date.now() + Math.random(), at: new Date().toISOString() });
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 200)));
+    }
+
+    function clearAllData() {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(HISTORY_KEY);
+    }
+
+    /* ── Helpers ── */
+    function getStatus(qty) {
+      if (qty <= 0) return { label: 'Out of Stock', className: 'badge-oos' };
+      if (qty <= LOW_STOCK_THRESHOLD) return { label: 'Low Stock', className: 'badge-low' };
+      return { label: 'In Stock', className: 'badge-ok' };
+    }
+
+    function formatPeso(n) {
+      return '₱' + Number(n).toLocaleString('en-PH', { minimumFractionDigits: 0 });
+    }
+
+    function nextId(products) {
+      return products.reduce((max, p) => Math.max(max, p.id), 0) + 1;
+    }
+
+    /* ── App ── */
+    function App() {
+      const [products, setProducts] = useState([]);
+      const [search, setSearch] = useState('');
+      const [categoryFilter, setCategoryFilter] = useState('all');
+      const [statusFilter, setStatusFilter] = useState('all');
+      const [modal, setModal] = useState(null);
+      const [editProduct, setEditProduct] = useState(null);
+      const [toast, setToast] = useState(null);
+      const [history, setHistory] = useState([]);
+
+      useEffect(() => {
+        setProducts(loadProducts());
+        setHistory(loadHistory());
+      }, []);
+
+      const persist = useCallback((next) => {
+        setProducts(next);
+        saveProducts(next);
+      }, []);
+
+      const showToast = useCallback((msg) => {
+        setToast(msg);
+        setTimeout(() => setToast(null), 2200);
+      }, []);
+
+      const adjustStock = (id, delta) => {
+        const product = products.find(p => p.id === id);
+        if (!product) return;
+        const newQty = Math.max(0, product.currentStock + delta);
+        const next = products.map(p => p.id === id ? { ...p, currentStock: newQty } : p);
+        pushHistory({ type: 'adjust', productId: id, productName: product.name, from: product.currentStock, to: newQty, delta });
+        setHistory(loadHistory());
+        persist(next);
+      };
+
+      const setStockExact = (id, value) => {
+        const qty = Math.max(0, parseInt(value, 10) || 0);
+        const product = products.find(p => p.id === id);
+        if (!product) return;
+        const next = products.map(p => p.id === id ? { ...p, currentStock: qty } : p);
+        pushHistory({ type: 'set', productId: id, productName: product.name, from: product.currentStock, to: qty });
+        setHistory(loadHistory());
+        persist(next);
+      };
+
+      const resetWeeklyStock = () => {
+        const next = products.map(p => ({ ...p, currentStock: p.weeklyStock }));
+        pushHistory({ type: 'reset', productName: 'All products', note: 'Weekly stock reset' });
+        setHistory(loadHistory());
+        persist(next);
+        setModal(null);
+        showToast('Weekly stock reset for all products');
+      };
+
+      const saveProduct = (form) => {
+        if (editProduct) {
+          const next = products.map(p =>
+            p.id === editProduct.id
+              ? {
+                  ...p,
+                  name: form.name.trim(),
+                  category: form.category,
+                  price: Number(form.price) || 0,
+                  cost: Number(form.cost) || 0,
+                  description: form.description.trim(),
+                  weeklyStock: Number(form.weeklyStock) || 0,
+                  currentStock: Number(form.currentStock) || 0,
+                  bestSeller: form.bestSeller,
+                  isActive: form.isActive,
+                }
+              : p
+          );
+          pushHistory({ type: 'edit', productId: editProduct.id, productName: form.name.trim() });
+          setHistory(loadHistory());
+          persist(next);
+          showToast(`Updated "${form.name.trim()}"`);
+        } else {
+          const newProduct = {
+            id: nextId(products),
+            name: form.name.trim(),
+            category: form.category,
+            price: Number(form.price) || 0,
+            cost: Number(form.cost) || 0,
+            description: form.description.trim(),
+            weeklyStock: Number(form.weeklyStock) || 0,
+            currentStock: Number(form.currentStock) || 0,
+            bestSeller: form.bestSeller,
+            isActive: form.isActive,
+          };
+          pushHistory({ type: 'add', productId: newProduct.id, productName: newProduct.name });
+          setHistory(loadHistory());
+          persist([...products, newProduct]);
+          showToast(`Added "${newProduct.name}"`);
+        }
+        setModal(null);
+        setEditProduct(null);
+      };
+
+      const deleteProduct = (id) => {
+        const product = products.find(p => p.id === id);
+        if (!product) return;
+        if (!window.confirm(`Delete "${product.name}"? This cannot be undone.`)) return;
+        pushHistory({ type: 'delete', productId: id, productName: product.name });
+        setHistory(loadHistory());
+        persist(products.filter(p => p.id !== id));
+        showToast(`Deleted "${product.name}"`);
+      };
+
+      const handleExport = () => {
+        const data = JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), products }, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `weekend-bakes-inventory-${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Inventory exported');
+      };
+
+      const handleImport = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const data = JSON.parse(reader.result);
+            if (!data.products || !Array.isArray(data.products)) throw new Error('Missing products array');
+            const imported = data.products.map(p => ({
+              id: Number(p.id),
+              name: String(p.name || ''),
+              category: String(p.category || ''),
+              price: Number(p.price || 0),
+              cost: Number(p.cost || 0),
+              description: String(p.description || ''),
+              weeklyStock: Number(p.weeklyStock ?? p.weekly_stock ?? 0),
+              currentStock: Number(p.currentStock ?? p.current_stock ?? 0),
+              bestSeller: !!(p.bestSeller ?? p.best_seller),
+              isActive: p.isActive !== false && p.is_active !== 0,
+            }));
+            persist(imported);
+            pushHistory({ type: 'import', productName: `${imported.length} products` });
+            setHistory(loadHistory());
+            showToast(`Imported ${imported.length} products`);
+          } catch (err) {
+            alert('Import failed: ' + err.message);
+          }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+      };
+
+      const handleClear = () => {
+        clearAllData();
+        const seeded = SEED_PRODUCTS.map(p => ({ ...p }));
+        persist(seeded);
+        setHistory([]);
+        setModal(null);
+        showToast('Data cleared & reseeded');
+      };
+
+      const filtered = useMemo(() => {
+        let list = products.filter(p => p.isActive !== false);
+        if (search.trim()) {
+          const q = search.trim().toLowerCase();
+          list = list.filter(p =>
+            p.name.toLowerCase().includes(q) ||
+            (p.category || '').toLowerCase().includes(q) ||
+            (p.description || '').toLowerCase().includes(q)
+          );
+        }
+        if (categoryFilter !== 'all') list = list.filter(p => p.category === categoryFilter);
+        if (statusFilter === 'low') list = list.filter(p => p.currentStock > 0 && p.currentStock <= LOW_STOCK_THRESHOLD);
+        else if (statusFilter === 'oos') list = list.filter(p => p.currentStock <= 0);
+        else if (statusFilter === 'ok') list = list.filter(p => p.currentStock > LOW_STOCK_THRESHOLD);
+        return list.slice().sort((a, b) => {
+          const ca = (a.category || '').localeCompare(b.category || '');
+          return ca !== 0 ? ca : (a.name || '').localeCompare(b.name || '');
+        });
+      }, [products, search, categoryFilter, statusFilter]);
+
+      const stats = useMemo(() => {
+        const active = products.filter(p => p.isActive !== false);
+        return {
+          totalProducts: active.length,
+          totalItems: active.reduce((s, p) => s + p.currentStock, 0),
+          lowCount: active.filter(p => p.currentStock > 0 && p.currentStock <= LOW_STOCK_THRESHOLD).length,
+          oosCount: active.filter(p => p.currentStock <= 0).length,
+          totalValue: active.reduce((s, p) => s + p.currentStock * p.cost, 0),
+        };
+      }, [products]);
+
+      const lowStockNames = products
+        .filter(p => p.isActive !== false && p.currentStock > 0 && p.currentStock <= LOW_STOCK_THRESHOLD)
+        .map(p => `${p.name} (${p.currentStock})`);
+      const oosNames = products
+        .filter(p => p.isActive !== false && p.currentStock <= 0)
+        .map(p => p.name);
+
+      const rows = useMemo(() => {
+        const result = [];
+        let lastCat = null;
+        for (const p of filtered) {
+          if (p.category !== lastCat) {
+            lastCat = p.category;
+            const count = filtered.filter(x => x.category === lastCat).length;
+            result.push({ type: 'cat', category: lastCat, count });
+          }
+          result.push({ type: 'product', product: p });
+        }
+        return result;
+      }, [filtered]);
+
+      return (
+        <div className="app">
+          <header className="header">
+            <div className="brand">
+              <h1>Weekend Bakes</h1>
+              <span>Inventory Management · Local only</span>
+            </div>
+            <div className="header-actions">
+              <button className="btn btn-secondary" onClick={() => setModal('history')}>History</button>
+              <button className="btn btn-secondary" onClick={handleExport}>Export</button>
+              <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
+                Import
+                <input type="file" accept=".json" onChange={handleImport} hidden />
+              </label>
+              <button className="btn btn-primary" onClick={() => { setEditProduct(null); setModal('add'); }}>
+                + Add Product
+              </button>
+            </div>
+          </header>
+
+          <div className="stats">
+            <div className="stat-card">
+              <h4>Products</h4>
+              <div className="value">{stats.totalProducts}</div>
+            </div>
+            <div className="stat-card">
+              <h4>Total Units</h4>
+              <div className="value">{stats.totalItems}</div>
+            </div>
+            <div className={`stat-card ${stats.lowCount ? 'warn' : ''}`}>
+              <h4>Low Stock</h4>
+              <div className="value">{stats.lowCount}</div>
+            </div>
+            <div className={`stat-card ${stats.oosCount ? 'alert' : ''}`}>
+              <h4>Out of Stock</h4>
+              <div className="value">{stats.oosCount}</div>
+            </div>
+            <div className="stat-card">
+              <h4>Est. Cost Value</h4>
+              <div className="value" style={{ fontSize: '1.2rem' }}>{formatPeso(stats.totalValue)}</div>
+            </div>
+          </div>
+
+          {oosNames.length > 0 && (
+            <div className="alert-banner danger">
+              <strong>Out of Stock:</strong> {oosNames.join(', ')}
+            </div>
+          )}
+          {lowStockNames.length > 0 && (
+            <div className="alert-banner">
+              <strong>Low Stock:</strong> {lowStockNames.join(', ')}
+            </div>
+          )}
+
+          <div className="toolbar">
+            <input
+              className="search-input"
+              type="search"
+              placeholder="Search products…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            <select className="filter-select" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
+              <option value="all">All categories</option>
+              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <select className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+              <option value="all">All status</option>
+              <option value="ok">In Stock</option>
+              <option value="low">Low Stock</option>
+              <option value="oos">Out of Stock</option>
+            </select>
+            <button className="btn btn-secondary" onClick={() => setModal('confirm-reset')}>
+              Reset Weekly Stock
+            </button>
+            <button className="btn btn-ghost" onClick={() => setModal('confirm-clear')}>
+              Reset Data
+            </button>
+          </div>
+
+          <div className="table-card">
+            <div className="table-wrapper">
+              {rows.length === 0 ? (
+                <div className="empty">
+                  <p>No products match your filters.</p>
+                  <button className="btn btn-primary" onClick={() => { setSearch(''); setCategoryFilter('all'); setStatusFilter('all'); }}>
+                    Clear filters
+                  </button>
+                </div>
+              ) : (
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Category</th>
+                      <th>Stock</th>
+                      <th>Status</th>
+                      <th>Badge</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row, i) => {
+                      if (row.type === 'cat') {
+                        return (
+                          <tr key={`cat-${row.category}`} className="cat-header">
+                            <td colSpan={6}>{row.category} ({row.count})</td>
+                          </tr>
+                        );
+                      }
+                      const p = row.product;
+                      const status = getStatus(p.currentStock);
+                      return (
+                        <tr key={p.id} className={p.currentStock <= 0 ? 'row-oos' : ''}>
+                          <td>
+                            <div className="product-name">{p.name}</div>
+                            <div className="product-meta">
+                              {formatPeso(p.price)} · cost {formatPeso(p.cost)}
+                              {p.weeklyStock > 0 && ` · weekly ${p.weeklyStock}`}
+                            </div>
+                          </td>
+                          <td>{p.category}</td>
+                          <td>
+                            <div className="stock-wrap">
+                              <button
+                                className="stock-btn"
+                                onClick={() => adjustStock(p.id, -1)}
+                                disabled={p.currentStock <= 0}
+                              >−</button>
+                              <input
+                                className="stock-qty-input"
+                                type="number"
+                                min={0}
+                                value={p.currentStock}
+                                onChange={e => setStockExact(p.id, e.target.value)}
+                              />
+                              <button
+                                className="stock-btn plus"
+                                onClick={() => adjustStock(p.id, 1)}
+                              >+</button>
+                            </div>
+                          </td>
+                          <td><span className={`badge ${status.className}`}>{status.label}</span></td>
+                          <td>
+                            {p.bestSeller
+                              ? <span className="badge badge-best">Best Seller</span>
+                              : <span style={{ color: 'var(--muted)' }}>—</span>}
+                          </td>
+                          <td>
+                            <div className="actions">
+                              <button
+                                className="icon-btn edit"
+                                title="Edit"
+                                onClick={() => { setEditProduct(p); setModal('edit'); }}
+                              >✎</button>
+                              <button
+                                className="icon-btn delete"
+                                title="Delete"
+                                onClick={() => deleteProduct(p.id)}
+                              >✕</button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+
+          <p className="footer-note">
+            All data is stored in your browser (localStorage). No server or internet required after first load.
+          </p>
+
+          {(modal === 'add' || modal === 'edit') && (
+            <ProductModal
+              product={editProduct}
+              onSave={saveProduct}
+              onClose={() => { setModal(null); setEditProduct(null); }}
+            />
+          )}
+          {modal === 'history' && (
+            <HistoryModal history={history} onClose={() => setModal(null)} />
+          )}
+          {modal === 'confirm-reset' && (
+            <ConfirmModal
+              title="Reset Weekly Stock?"
+              message="This will set every product's current stock back to its weekly stock value. Continue?"
+              confirmLabel="Reset All"
+              onConfirm={resetWeeklyStock}
+              onClose={() => setModal(null)}
+            />
+          )}
+          {modal === 'confirm-clear' && (
+            <ConfirmModal
+              title="Reset All Data?"
+              message="This clears local inventory and history, then reseeds the original product list. Continue?"
+              confirmLabel="Clear & Reseed"
+              danger
+              onConfirm={handleClear}
+              onClose={() => setModal(null)}
+            />
+          )}
+          {toast && <div className="toast">{toast}</div>}
+        </div>
+      );
+    }
+
+    /* ── Product Modal ── */
+    function ProductModal({ product, onSave, onClose }) {
+      const isEdit = !!product;
+      const [form, setForm] = useState({
+        name: product?.name || '',
+        category: product?.category || CATEGORIES[0],
+        price: product?.price ?? '',
+        cost: product?.cost ?? '',
+        description: product?.description || '',
+        weeklyStock: product?.weeklyStock ?? 20,
+        currentStock: product?.currentStock ?? 20,
+        bestSeller: product?.bestSeller || false,
+        isActive: product?.isActive !== false,
+      });
+
+      const handleChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        setForm(f => ({ ...f, [name]: type === 'checkbox' ? checked : value }));
+      };
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!form.name.trim()) { alert('Product name is required'); return; }
+        onSave(form);
+      };
+
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{isEdit ? 'Edit Product' : 'Add Product'}</h2>
+              <button className="icon-btn" onClick={onClose}>✕</button>
+            </div>
+            <form onSubmit={handleSubmit}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Name *</label>
+                  <input name="name" value={form.name} onChange={handleChange} required autoFocus />
+                </div>
+                <div className="form-group">
+                  <label>Category</label>
+                  <select name="category" value={form.category} onChange={handleChange}>
+                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Price (₱)</label>
+                    <input name="price" type="number" min="0" step="1" value={form.price} onChange={handleChange} />
+                  </div>
+                  <div className="form-group">
+                    <label>Cost (₱)</label>
+                    <input name="cost" type="number" min="0" step="1" value={form.cost} onChange={handleChange} />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Weekly Stock</label>
+                    <input name="weeklyStock" type="number" min="0" value={form.weeklyStock} onChange={handleChange} />
+                  </div>
+                  <div className="form-group">
+                    <label>Current Stock</label>
+                    <input name="currentStock" type="number" min="0" value={form.currentStock} onChange={handleChange} />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Description</label>
+                  <textarea name="description" rows={2} value={form.description} onChange={handleChange} />
+                </div>
+                <div className="checkbox-row">
+                  <input type="checkbox" id="bestSeller" name="bestSeller" checked={form.bestSeller} onChange={handleChange} />
+                  <label htmlFor="bestSeller">Best Seller</label>
+                </div>
+                <div className="checkbox-row">
+                  <input type="checkbox" id="isActive" name="isActive" checked={form.isActive} onChange={handleChange} />
+                  <label htmlFor="isActive">Active</label>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+                <button type="submit" className="btn btn-primary">{isEdit ? 'Save Changes' : 'Add Product'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    /* ── History Modal ── */
+    function HistoryModal({ history, onClose }) {
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Stock History</h2>
+              <button className="icon-btn" onClick={onClose}>✕</button>
+            </div>
+            <div className="modal-body">
+              {history.length === 0 ? (
+                <p style={{ color: 'var(--muted)', textAlign: 'center' }}>No history yet.</p>
+              ) : (
+                <div className="history-list">
+                  {history.map(h => (
+                    <div key={h.id} className="history-item">
+                      <div>
+                        <strong>{h.productName}</strong>
+                        {' — '}
+                        {h.type === 'adjust' && <span>{h.delta > 0 ? '+' : ''}{h.delta} → {h.to}</span>}
+                        {h.type === 'set' && <span>set to {h.to}</span>}
+                        {h.type === 'reset' && <span>weekly reset</span>}
+                        {h.type === 'add' && <span>added</span>}
+                        {h.type === 'edit' && <span>edited</span>}
+                        {h.type === 'delete' && <span>deleted</span>}
+                        {h.type === 'import' && <span>imported</span>}
+                      </div>
+                      <div className="time">{new Date(h.at).toLocaleString()}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={onClose}>Close</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ── Confirm Modal ── */
+    function ConfirmModal({ title, message, confirmLabel, danger, onConfirm, onClose }) {
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
+            <div className="modal-header">
+              <h2>{title}</h2>
+              <button className="icon-btn" onClick={onClose}>✕</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: 'var(--muted)', fontSize: '0.95rem' }}>{message}</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+              <button className={`btn ${danger ? 'btn-danger' : 'btn-primary'}`} onClick={onConfirm}>
+                {confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
